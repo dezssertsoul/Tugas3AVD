@@ -1,4 +1,4 @@
-# 1. Muat (Load) Paket yang Diperlukan
+# 1.Paket yang Diperlukan
 library(shiny)
 library(readr)
 library(ggplot2)
@@ -35,17 +35,13 @@ col_labels <- c(
   "RainTomorrow" = "Hujan Besok?"
 )
 
-# 2. Persiapan Daftar Variabel untuk Pilihan Input
-# Mendapatkan nama-nama kolom numerik
+# 2. Daftar Variabel untuk Pilihan Input
 numeric_cols <- names(data_raw)[sapply(data_raw, is.numeric)]
-# Mendapatkan nama-nama kolom kategorikal (character/factor)
 categorical_cols <- names(data_raw)[sapply(data_raw, function(x) is.character(x) | is.factor(x))]
-# Semua kolom
 all_cols <- names(data_raw)
 
 # 3. Antarmuka Pengguna (UI)
 ui <- fluidPage(
-  # Judul Aplikasi
   titlePanel("Aplikasi Weather Track"),
   
   sidebarLayout(
@@ -57,9 +53,7 @@ ui <- fluidPage(
                               "Bar Plot Interaktif" = "bar",
                               "Tabel Data Interaktif" = "table")),
       
-      # Pilihan Variabel: Hanya muncul jika plot yang sesuai dipilih
-      
-      # Pilihan untuk Scatter dan Line Plot (Memerlukan 2 variabel numerik)
+      # Pilihan untuk Scatter dan Line Plot
       conditionalPanel(
         condition = "input.plot_type == 'scatter' | input.plot_type == 'line'",
         selectInput("x_var", "Variabel X (Sumbu Horizontal):",
@@ -70,7 +64,7 @@ ui <- fluidPage(
                     choices = c("Tidak Ada" = "None", all_cols), selected = "RainToday")
       ),
       
-      # Pilihan untuk Bar Plot (Memerlukan 1 variabel kategorikal)
+      # Pilihan untuk Bar Plot
       conditionalPanel(
         condition = "input.plot_type == 'bar'",
         selectInput("bar_var", "Variabel Bar Plot (Kategorikal):",
@@ -82,12 +76,12 @@ ui <- fluidPage(
     
     # Output Utama
     mainPanel(
-      # Output Plotly (untuk scatter, line, bar)
+      # Output Plotly
       conditionalPanel(
         condition = "input.plot_type == 'scatter' | input.plot_type == 'line' | input.plot_type == 'bar'",
         plotlyOutput("interactive_plot", height = "500px")
       ),
-      # Output Data Table (untuk tabel data)
+      # Output Data Table
       conditionalPanel(
         condition = "input.plot_type == 'table'",
         DTOutput("data_table")
@@ -99,14 +93,11 @@ ui <- fluidPage(
 # 4. Logika Server
 server <- function(input, output) {
   
-  # Fungsi Reaktif untuk Memfilter Data
-  # Hanya menyimpan baris yang lengkap (tanpa NA) untuk variabel yang akan diplot.
   data_filtered <- reactive({
     req(input$plot_type)
     
     df <- data_raw
     
-    # Tentukan kolom yang diperlukan untuk plot yang dipilih
     if (input$plot_type == "scatter" | input$plot_type == "line") {
       req(input$x_var, input$y_var)
       
@@ -121,13 +112,12 @@ server <- function(input, output) {
       df <- df[, input$bar_var, drop = FALSE]
     }
     
-    # Hapus baris dengan nilai NA untuk kolom yang dipilih
     df <- na.omit(df)
     
     return(df)
   })
   
-  # Render Plot Interaktif (Scatter, Line, Bar)
+  # Render Plot Interaktif
   output$interactive_plot <- renderPlotly({
     df_plot <- data_filtered()
     
@@ -141,7 +131,7 @@ server <- function(input, output) {
         theme_minimal()
       
     } else if (input$plot_type == "line") {
-      # Line Plot (menggunakan Indeks Observasi sebagai sumbu x, karena tidak ada kolom tanggal)
+      # Line Plot
       df_plot$Index <- 1:nrow(df_plot)
       
       p <- ggplot(df_plot, aes_string(x = "Index", y = input$y_var, 
@@ -152,7 +142,7 @@ server <- function(input, output) {
         theme_minimal()
       
     } else if (input$plot_type == "bar") {
-      # Bar Plot untuk Frekuensi (Count)
+      # Bar Plot untuk Frekuensi
       p <- ggplot(df_plot, aes_string(x = input$bar_var)) +
         geom_bar(fill = "steelblue") +
         labs(title = paste("Bar Plot Frekuensi:", input$bar_var),
@@ -174,4 +164,5 @@ server <- function(input, output) {
 }
 
 # 7. Jalankan Aplikasi
+
 shinyApp(ui = ui, server = server)
